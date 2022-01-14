@@ -179,7 +179,7 @@ final class SwooleSessionStorage implements SessionStorageInterface
     /**
      * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
