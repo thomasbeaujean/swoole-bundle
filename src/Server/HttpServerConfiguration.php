@@ -25,6 +25,7 @@ class HttpServerConfiguration
     private const SWOOLE_HTTP_SERVER_CONFIG_PID_FILE = 'pid_file';
     private const SWOOLE_HTTP_SERVER_CONFIG_BUFFER_OUTPUT_SIZE = 'buffer_output_size';
     private const SWOOLE_HTTP_SERVER_CONFIG_PACKAGE_MAX_LENGTH = 'package_max_length';
+    private const SWOOLE_HTTP_SERVER_CONFIG_MAX_REQUEST_EXECUTION_TIME = 'max_request_execution_time';
     private const SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST = 'worker_max_request';
     private const SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST_GRACE = 'worker_max_request_grace';
 
@@ -45,6 +46,7 @@ class HttpServerConfiguration
         self::SWOOLE_HTTP_SERVER_CONFIG_PID_FILE => 'pid_file',
         self::SWOOLE_HTTP_SERVER_CONFIG_BUFFER_OUTPUT_SIZE => 'buffer_output_size',
         self::SWOOLE_HTTP_SERVER_CONFIG_PACKAGE_MAX_LENGTH => 'package_max_length',
+        self::SWOOLE_HTTP_SERVER_CONFIG_MAX_REQUEST_EXECUTION_TIME => 'max_request_execution_time',
         self::SWOOLE_HTTP_SERVER_CONFIG_TASK_WORKER_COUNT => 'task_worker_num',
         self::SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST => 'max_request',
         self::SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST_GRACE => 'max_request_grace',
@@ -85,17 +87,19 @@ class HttpServerConfiguration
      *                        - serve_static_files (default: false)
      *                        - public_dir (default: '%kernel.root_dir%/public')
      *                        - buffer_output_size (default: '2097152' unit in byte (2MB))
+     *                        - max_request_execution_time (default: '30' in second)
      *                        - package_max_length (default: '8388608b' unit in byte (8MB))
      *                        - worker_max_requests: Number of requests after which the worker reloads
      *                        - worker_max_requests_grace: Max random number of requests for worker reloading
      *
      * @throws \Assert\AssertionFailedException
      */
-    public function __construct(Sockets $sockets, string $runningMode = 'process', array $settings = [])
+    public function __construct(Sockets $sockets, string $runningMode = 'process', array $coroutineHokFlags = [], array $settings = [])
     {
         $this->sockets = $sockets;
 
         $this->changeRunningMode($runningMode);
+        $this->setCoroutineHookFlags($coroutineHokFlags);
         $this->initializeSettings($settings);
     }
 
@@ -104,6 +108,12 @@ class HttpServerConfiguration
         Assertion::inArray($runningMode, ['process', 'reactor', 'thread']);
 
         $this->runningMode = $runningMode;
+    }
+
+    public function setCoroutineHookFlags(array $coroutineHookFlags)
+    {
+        $flags = array_reduce($coroutineHookFlags, function($a, $b) { return $a | $b; }, 0);
+        \Swoole\Coroutine::set(['hook_flags' => $flags]);
     }
 
     public function isDaemon(): bool
@@ -216,6 +226,11 @@ class HttpServerConfiguration
         return $this->settings[self::SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST_GRACE] ?? null;
     }
 
+    public function getMaxExecutionTime(): ?int
+    {
+        return $this->settings[self::SWOOLE_HTTP_SERVER_CONFIG_MAX_REQUEST_EXECUTION_TIME] ?? null;
+    }
+
     /**
      * @throws \Assert\AssertionFailedException
      */
@@ -294,6 +309,14 @@ class HttpServerConfiguration
     public function getSwooleMaxRequestGrace(): ?int
     {
         return $this->settings[self::SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST_GRACE] ?? null;
+    }
+
+    /**
+     * @see getSwooleSettings()
+     */
+    public function getSwooleMaxExecutionTime(): ?int
+    {
+        return $this->settings[self::SWOOLE_HTTP_SERVER_CONFIG_MAX_REQUEST_EXECUTION_TIME] ?? null;
     }
 
     /**
@@ -400,6 +423,7 @@ class HttpServerConfiguration
 
                 break;
             case self::SWOOLE_HTTP_SERVER_CONFIG_WORKER_MAX_REQUEST:
+            case self::SWOOLE_HTTP_SERVER_CONFIG_MAX_REQUEST_EXECUTION_TIME:
                 Assertion::integer($value, \sprintf('Setting "%s" must be an integer.', $key));
                 Assertion::greaterOrEqualThan($value, 0, 'Value cannot be negative, "%s" provided.');
 
