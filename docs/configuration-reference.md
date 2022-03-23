@@ -78,6 +78,13 @@ swoole:
             # see: \K911\Swoole\Bridge\Upscale\Blackfire\WithProfiler
             blackfire_profiler: false
 
+        coroutine_hook_flags: ~
+        # coroutine flags @see https://openswoole.com/docs/modules/swoole-runtime-flags
+        # array of coroutine flags. Bitwised OR
+        # example enabling max_request_execution_time:
+        # coroutine_hook_flags:
+        #    - !php/const SWOOLE_HOOK_SLEEP
+        #    - !php/const SWOOLE_HOOK_TCP
 
         # swoole http server settings
         # see https://www.swoole.co.uk/docs/modules/swoole-server/configuration
@@ -107,4 +114,11 @@ swoole:
             worker_max_request_grace: ~
             # 'grace period' for worker reloading. If not set, default is worker_max_request / 2. Worker reloads
             # after 'worker_max_request + rand(0,worker_max_request_grace)' requests
+
+            max_request_execution_time: 30
+            # HTTP Server max execution time, since v4.8.0
+            # To get max_request_execution_time to work, the coroutine_hook_flags MUST be set as follow:
+            # coroutine_hook_flags:
+            #    - !php/const SWOOLE_HOOK_SLEEP
+            #    - !php/const SWOOLE_HOOK_TCP
 ```

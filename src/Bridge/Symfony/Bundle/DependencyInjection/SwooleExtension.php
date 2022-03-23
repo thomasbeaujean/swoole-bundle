@@ -188,6 +188,7 @@ final class SwooleExtension extends Extension implements PrependExtensionInterfa
             'host' => $host,
             'port' => $port,
             'running_mode' => $runningMode,
+            'coroutine_hook_flags' => $coroutingHookFlags,
             'socket_type' => $socketType,
             'ssl_enabled' => $sslEnabled,
             'settings' => $settings,
@@ -230,6 +231,7 @@ final class SwooleExtension extends Extension implements PrependExtensionInterfa
         $container->getDefinition(HttpServerConfiguration::class)
             ->addArgument(new Reference(Sockets::class))
             ->addArgument($runningMode)
+            ->addArgument($coroutingHookFlags)
             ->addArgument($settings)
         ;
 

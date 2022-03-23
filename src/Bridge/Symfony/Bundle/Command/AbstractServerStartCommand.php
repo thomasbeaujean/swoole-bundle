@@ -102,6 +102,7 @@ abstract class AbstractServerStartCommand extends Command
             exit(1);
         }
 
+
         $swooleServer = $this->makeSwooleHttpServer();
         $this->serverConfigurator->configure($swooleServer);
         $this->server->attach($swooleServer);
@@ -202,6 +203,7 @@ abstract class AbstractServerStartCommand extends Command
             ['reactor_count', $serverConfiguration->getReactorCount()],
             ['worker_max_request', $serverConfiguration->getMaxRequest()],
             ['worker_max_request_grace', $serverConfiguration->getMaxRequestGrace()],
+            ['max_execution_time', $serverConfiguration->getMaxExecutionTime()],
             ['memory_limit', format_bytes(get_max_memory())],
             ['trusted_hosts', \implode(', ', $runtimeConfiguration['trustedHosts'])],
         ];
