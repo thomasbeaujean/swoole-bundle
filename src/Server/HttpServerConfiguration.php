@@ -344,7 +344,12 @@ class HttpServerConfiguration
     private function initializeSettings(array $init): void
     {
         $this->settings = [];
-        $cpuCores = \swoole_cpu_num();
+        // swoole_cpu_num does not exist anymore in swoole 22
+        if (function_exists('swoole_cpu_num')) {
+            $cpuCores = \swoole_cpu_num();
+        } else {
+            $cpuCores = 1; // fallback, the app should configure the number of cores
+        }
 
         if (!isset($init[self::SWOOLE_HTTP_SERVER_CONFIG_REACTOR_COUNT])) {
             $init[self::SWOOLE_HTTP_SERVER_CONFIG_REACTOR_COUNT] = $cpuCores;
