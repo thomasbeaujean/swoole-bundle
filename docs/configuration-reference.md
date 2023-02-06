@@ -22,6 +22,7 @@ swoole:
             - '*'
             - 127.0.0.1/8
             - 192.168.2./16
+        trusted_headers: ['x-forwarded-for', 'x-forwarded-proto']
 
         # enables static file serving
         static: advanced

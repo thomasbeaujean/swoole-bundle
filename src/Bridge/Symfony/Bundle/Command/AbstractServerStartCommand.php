@@ -22,6 +22,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 abstract class AbstractServerStartCommand extends Command
 {
@@ -77,6 +78,7 @@ abstract class AbstractServerStartCommand extends Command
             ->addOption('public-dir', null, InputOption::VALUE_REQUIRED, 'Public directory', $this->getDefaultPublicDir())
             ->addOption('trusted-hosts', null, InputOption::VALUE_REQUIRED, 'Trusted hosts', $this->parameterBag->get('swoole.http_server.trusted_hosts'))
             ->addOption('trusted-proxies', null, InputOption::VALUE_REQUIRED, 'Trusted proxies', $this->parameterBag->get('swoole.http_server.trusted_proxies'))
+            ->addOption('trusted-headers', null, InputOption::VALUE_REQUIRED, 'Trusted headers', $this->parameterBag->get('swoole.http_server.trusted_headers'))
             ->addOption('api', null, InputOption::VALUE_NONE, 'Enable API Server')
             ->addOption('api-port', null, InputOption::VALUE_REQUIRED, 'Listen for API Server on this port', $this->parameterBag->get('swoole.http_server.api.port'))
         ;
@@ -175,8 +177,11 @@ abstract class AbstractServerStartCommand extends Command
     {
         $trustedHosts = $input->getOption('trusted-hosts');
         $trustedProxies = $input->getOption('trusted-proxies');
+        $trustedHeaders = $input->getOption('trusted-headers');
         $runtimeConfiguration['trustedHosts'] = $this->decodeSet($trustedHosts);
         $runtimeConfiguration['trustedProxies'] = $this->decodeSet($trustedProxies);
+        $runtimeConfiguration['trustedHeaders'] = $this->decodeSet($trustedHeaders);
+        $runtimeConfiguration['trustedHeaderSet'] = $this->resolveTrustedHeaders($runtimeConfiguration['trustedHeaders']);
 
         Assertion::isArray($runtimeConfiguration['trustedProxies']);
         if (\in_array('*', $runtimeConfiguration['trustedProxies'], true)) {
@@ -206,6 +211,8 @@ abstract class AbstractServerStartCommand extends Command
             ['max_execution_time', $serverConfiguration->getMaxExecutionTime()],
             ['memory_limit', format_bytes(get_max_memory())],
             ['trusted_hosts', \implode(', ', $runtimeConfiguration['trustedHosts'])],
+            ['trusted_headers', \implode(', ', $runtimeConfiguration['trustedHeaders'])],
+            ['trusted_headers_set', decbin($runtimeConfiguration['trustedHeaderSet'])],
         ];
 
         if (isset($runtimeConfiguration['trustAllProxies'])) {
@@ -311,5 +318,24 @@ abstract class AbstractServerStartCommand extends Command
         }
 
         return $set;
+    }
+
+    private function resolveTrustedHeaders(array $headers): int
+    {
+        $trustedHeaders = 0;
+
+        foreach ($headers as $h) {
+            $trustedHeaders |= match ($h) {
+                'forwarded' => Request::HEADER_FORWARDED,
+                'x-forwarded-for' => Request::HEADER_X_FORWARDED_FOR,
+                'x-forwarded-host' => Request::HEADER_X_FORWARDED_HOST,
+                'x-forwarded-proto' => Request::HEADER_X_FORWARDED_PROTO,
+                'x-forwarded-port' => Request::HEADER_X_FORWARDED_PORT,
+                'x-forwarded-prefix' => Request::HEADER_X_FORWARDED_PREFIX,
+                default => 0,
+            };
+        }
+
+        return $trustedHeaders;
     }
 }

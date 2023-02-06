@@ -110,6 +110,7 @@ final class SwooleExtension extends Extension implements PrependExtensionInterfa
 
         $container->setParameter('swoole.http_server.trusted_proxies', $config['trusted_proxies']);
         $container->setParameter('swoole.http_server.trusted_hosts', $config['trusted_hosts']);
+        $container->setParameter('swoole.http_server.trusted_headers', $config['trusted_headers']);
         $container->setParameter('swoole.http_server.api.host', $config['api']['host']);
         $container->setParameter('swoole.http_server.api.port', $config['api']['port']);
 

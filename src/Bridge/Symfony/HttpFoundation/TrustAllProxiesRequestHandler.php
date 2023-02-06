@@ -16,11 +16,13 @@ final class TrustAllProxiesRequestHandler implements RequestHandlerInterface, Bo
 
     private $decorated;
     private $trustAllProxies;
+    private $trustedHeaderSet;
 
-    public function __construct(RequestHandlerInterface $decorated, bool $trustAllProxies = false)
+    public function __construct(RequestHandlerInterface $decorated, bool $trustAllProxies = false, int $trustedHeaderSet = null)
     {
         $this->decorated = $decorated;
         $this->trustAllProxies = $trustAllProxies;
+        $this->trustedHeaderSet = $trustedHeaderSet;
     }
 
     /**
@@ -30,6 +32,9 @@ final class TrustAllProxiesRequestHandler implements RequestHandlerInterface, Bo
     {
         if (isset($runtimeConfiguration['trustAllProxies']) && true === $runtimeConfiguration['trustAllProxies']) {
             $this->trustAllProxies = true;
+        }
+        if (isset($runtimeConfiguration['trustedHeaderSet'])) {
+            $this->trustedHeaderSet = $runtimeConfiguration['trustedHeaderSet'];
         }
     }
 
@@ -43,8 +48,14 @@ final class TrustAllProxiesRequestHandler implements RequestHandlerInterface, Bo
      */
     public function handle(SwooleRequest $request, SwooleResponse $response): void
     {
+        $headers = self::HEADER_X_FORWARDED_ALL;
+
+        if ($this->trustedHeaderSet) {
+            $headers = $this->trustedHeaderSet;
+        }
+
         if ($this->trustAllProxies()) {
-            SymfonyRequest::setTrustedProxies(['127.0.0.1', $request->server['remote_addr']], self::HEADER_X_FORWARDED_ALL);
+            SymfonyRequest::setTrustedProxies(['127.0.0.1', $request->server['remote_addr']], $headers);
         }
 
         $this->decorated->handle($request, $response);
