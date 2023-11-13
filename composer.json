@@ -1,5 +1,5 @@
 {
-    "name": "k911/swoole-bundle",
+    "name": "tbn/swoole-bundle",
     "type": "library",
     "description": "Swoole Symfony Bundle",
     "keywords": [
@@ -11,12 +11,6 @@
         "Server"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/k911/swoole-bundle",
-    "authors": [{
-        "name": "Konrad Obal",
-        "email": "konrad.obal@gmail.com",
-        "homepage": "https://github.com/k911"
-    }],
     "require": {
         "php": "^7.4|^8.0",
         "ext-json": "*",
