@@ -8,18 +8,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use K911\Swoole\Server\RequestHandler\RequestHandlerInterface;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
+use Doctrine\DBAL\Exception as DBALException;
+use Doctrine\DBAL\Connection;
+use Doctrine\Persistence\ManagerRegistry;
 
 final class EntityManagerHandler implements RequestHandlerInterface
 {
-    private $decorated;
-    private $connection;
-    private $entityManager;
-
-    public function __construct(RequestHandlerInterface $decorated, EntityManagerInterface $entityManager)
-    {
-        $this->decorated = $decorated;
-        $this->entityManager = $entityManager;
-        $this->connection = $entityManager->getConnection();
+    public function __construct(
+        private RequestHandlerInterface $decorated,
+        private EntityManagerInterface $entityManager,
+        private ManagerRegistry $managerRegistry,
+    ) {
     }
 
     /**
@@ -27,13 +26,33 @@ final class EntityManagerHandler implements RequestHandlerInterface
      */
     public function handle(Request $request, Response $response): void
     {
-        if (!$this->connection->ping()) {
-            $this->connection->close();
-            $this->connection->connect();
+        $this->pingConnection($this->entityManager);
+        $this->decorated->handle($request, $response);
+        $this->entityManager->clear();
+    }
+
+    private function pingConnection(EntityManagerInterface $entityManager): void
+    {
+        $connection = $entityManager->getConnection();
+
+        try {
+            $this->executeDummySql($connection);
+        } catch (DBALException) {
+            $connection->close();
+            // Attempt to reestablish the lazy connection by sending another query.
+            $this->executeDummySql($connection);
         }
 
-        $this->decorated->handle($request, $response);
+        if (!$entityManager->isOpen()) {
+            $this->managerRegistry->resetManager();
+        }
+    }
 
-        $this->entityManager->clear();
+    /**
+     * @throws DBALException
+     */
+    private function executeDummySql(Connection $connection): void
+    {
+        $connection->executeQuery($connection->getDatabasePlatform()->getDummySelectSQL());
     }
 }
